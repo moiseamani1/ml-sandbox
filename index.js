@@ -1,11 +1,19 @@
 // packages
 require('dotenv').config()
+
+
+//mongoose connection
 const mongoose = require('mongoose')
+mongoose.connect(process.env.DATABASEURL,{
+    useNewUrlParser:true,
+    useCreateIndex:true
+});
 
 // services, controllers, models
 const youtube_api = require('./api/youtube/index')
 const scheduler = require('./scheduler/cron')
 const Video = require('./models/video')
+const Snapshot= require('./models/snapshot')
 const { schedule } = require('node-cron')
 
 const createPopularVideosModels = () => youtube_api.getMostPopular()
@@ -35,6 +43,7 @@ const createPopularVideosModels = () => youtube_api.getMostPopular()
         })
     })
     .then(promiseArr => Promise.all(promiseArr))
+    
 
 // const saveVideoModels = async unsavedModels => {
 //     const saveResults = unsavedModels
@@ -48,9 +57,18 @@ const createPopularVideosModels = () => youtube_api.getMostPopular()
 //         })
 // }
 
-createPopularVideosModels().then(res => {console.log('res:', res)});
 
-// scheduler.createDailyJob(async () => {
-//     const unsavedModels = createPopularVideosModels();
-//     await saveVideoModels(unsavedModels)
-// })
+scheduler.createDailyJob(async () => {
+    // const unsavedModels = createPopularVideosModels();
+    // await saveVideoModels(unsavedModels)
+
+    createPopularVideosModels().then(res => {
+    
+        Snapshot.create({mostPopularVideos:res},(err)=>{})
+        Video.create(res,(err)=>{})
+    
+    });
+    
+
+
+})
